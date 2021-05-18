@@ -345,8 +345,9 @@ public class ExtendedIndexHandler<K>
         Object originalStart = startPos;
         Object originalEnd = endPos;
         short originalStartCondition = reversedScan ? 0 : relation;
-        //short originalEndCondition = !reversedScan ? 0 : relation;
-        short originalEndCondition = endPosInclusive ? TemplateMatchCodes.LE : TemplateMatchCodes.LT;
+        short originalEndCondition =  ( endPos == null ) ?
+                ( !reversedScan ? 0 : relation ) :
+                ( endPosInclusive ? TemplateMatchCodes.LE : TemplateMatchCodes.LT );
 
         NavigableMap baseMap = reversedScan ? _orderedStore.descendingMap() : _orderedStore;
         NavigableMap mapToScan;

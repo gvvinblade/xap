@@ -4876,7 +4876,7 @@ public class CacheManager extends AbstractCacheManager
                                 if( resultOIS instanceof ExtendedIndexIterator &&
                                         ((ExtendedIndexIterator) resultOIS).getOriginalStart() != null &&
                                         ((ExtendedIndexIterator) resultOIS).getOriginalEnd() != null) {
-                                    indexSize = ((ExtendedIndexIterator) resultOIS).getSize();
+                                    // calculate it before indexSize = ((ExtendedIndexIterator) resultOIS).getSize();
 
                                     boolean includeMin =
                                             ((ExtendedIndexIterator) resultOIS).getOriginalStartCondition() == TemplateMatchCodes.GE;

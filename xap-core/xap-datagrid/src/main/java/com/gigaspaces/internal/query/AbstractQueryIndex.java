@@ -110,7 +110,7 @@ public abstract class AbstractQueryIndex implements IQueryIndexScanner {
             resultIndicator =  IQueryIndexScanner.RESULT_IGNORE_INDEX; ////query of "OR" by non f-g index results can be non-fifo within the f-g
         }
         if (resultIndicator != null  ){
-            if(context.getExplainPlanContext() != null /*&& resultIndicator != IQueryIndexScanner.RESULT_IGNORE_INDEX*//*should we do it for age that is equals only ? */ ){
+            if(context.getExplainPlanContext() != null ){
                 IndexChoiceNode choiceNode = context.getExplainPlanContext().getFatherNode();
                 //check in order to prevent throwing NPE
                 if( choiceNode != null ) {

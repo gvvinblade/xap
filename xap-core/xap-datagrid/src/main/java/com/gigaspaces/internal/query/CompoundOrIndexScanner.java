@@ -88,15 +88,9 @@ public class CompoundOrIndexScanner extends AbstractCompoundIndexScanner
         for (IQueryIndexScanner indexScanner : indexScanners) {
             IObjectsList indexResult = indexScanner.getIndexedEntriesByType(context, typeData, template, latestIndexToConsider);
 
-            //if it's not last element
-            if (indexResult == IQueryIndexScanner.RESULT_IGNORE_INDEX ) {
-                if( indexScanners.indexOf( indexScanner ) == indexScanners.size() - 1 ) {
-                    context.setBlobStoreUsePureIndexesAccess(false);
-                    return indexResult;
-                }
-                else{
-                    continue;
-                }
+            if (indexResult == IQueryIndexScanner.RESULT_IGNORE_INDEX) {
+                context.setBlobStoreUsePureIndexesAccess(false);
+                return indexResult;
             }
 
             if (indexResult == IQueryIndexScanner.RESULT_NO_MATCH)

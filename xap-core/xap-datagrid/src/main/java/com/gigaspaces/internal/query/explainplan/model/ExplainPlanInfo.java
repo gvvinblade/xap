@@ -229,21 +229,18 @@ public class ExplainPlanInfo extends JdbcExplainPlan {
     }
 
     private boolean isIndexUsed() {
-        return getIndexInspectionsPerPartition().stream().anyMatch(indexInspectionDetail ->
-                ( indexInspectionDetail.getIndexes() != null && !indexInspectionDetail.getIndexes().isEmpty() && hasOptions( indexInspectionDetail.getIndexes() ) )
+        return getIndexInspectionsPerPartition().stream().anyMatch(
+                indexInspectionDetail ->
+                    ( indexInspectionDetail.getIndexes() != null &&
+                        !indexInspectionDetail.getIndexes().isEmpty() &&
+                        hasSelectedIndexes( indexInspectionDetail.getIndexes() ) )
         );
     }
 
-    private boolean hasOptions( List<IndexChoiceDetail> indexesDetails ){
+    private boolean hasSelectedIndexes(List<IndexChoiceDetail> indexesDetails ){
         boolean hasSelectedIndexes = false;
         for( IndexChoiceDetail indexDetails : indexesDetails ){
-            if( indexDetails.getOperator().equals( "OR" ) || indexDetails.getOperator().equals( "AND" ) ) {
-                if (!indexDetails.getSelectedIndexes().isEmpty() && !indexDetails.getInspectedIndexes().isEmpty()) {
-                    hasSelectedIndexes = true;
-                    break;
-                }
-            }
-            else{
+            if (!indexDetails.getSelectedIndexes().isEmpty() ) {
                 hasSelectedIndexes = true;
                 break;
             }

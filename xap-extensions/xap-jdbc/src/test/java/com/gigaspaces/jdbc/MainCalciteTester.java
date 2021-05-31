@@ -1,5 +1,9 @@
 package com.gigaspaces.jdbc;
 
+import com.gigaspaces.jdbc.data.Customer;
+import com.gigaspaces.jdbc.data.DataGenerator;
+import com.gigaspaces.jdbc.data.Product;
+import com.gigaspaces.jdbc.data.Purchase;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.AbstractSpaceConfigurer;
@@ -32,12 +36,16 @@ public class MainCalciteTester {
         try (Connection connection = DriverManager.getConnection("jdbc:gigaspaces:v3://localhost:4174/" + space.getSpaceName(), properties)) {
             Statement statement = connection.createStatement();
 
-//            execute(statement, String.format("SELECT * FROM %s where last_name = 'Bb' OR first_name = 'Eve'", "\"" + MyPojo.class.getName() + "\""));
+            execute(statement, String.format("select c.first_name,purchase.productId from %s as c " +
+                    "inner join " +
+                    "%s as purchase " +
+                    "on c.id = purchase.customerId", "\"" + Customer.class.getName() + "\"", "\"" + Purchase.class.getName() + "\""));
+//            execute(statement, String.format("SELECT age, email FROM %s where last_name = 'Bb'", "\"" + MyPojo.class.getName() + "\""));
 //            execute(statement, String.format("SELECT first_name as first, last_name as last FROM %s where last_name = 'Bb'", "\"" + MyPojo.class.getName() + "\""));
-//            execute(statement, String.format("SELECT * FROM %s as T where (T.last_name = 'Bb' AND T.first_name = 'Adam') OR ((T.last_name = 'Cc') or (T.email = 'Adler@msn.com') or (T.age>=40))", "\"" + MyPojo.class.getName() + "\""));
+//            execute(statement, String.format("SELECT * FROM %s as T where (T.last_name = 'Bb' AND T.first_name = 'Adam') OR ((T.last_name = 'Cc') or (T.email = 'Adler@msn.com') or (T.age>40))", "\"" + MyPojo.class.getName() + "\""));
 //            execute(statement, String.format("SELECT * FROM %s as T where T.last_name = 'Bb' or T.first_name = 'Adam' or T.last_name = 'Cc' or T.email = 'Adler@msn.com' or T.age>=40", "\"" + MyPojo.class.getName() + "\""));
 //            execute(statement, "SELECT * FROM com.gigaspaces.jdbc.MyPojo as T where (T.last_name = 'Bb' AND T.first_name = 'Adam') OR ((T.last_name = 'Cc') or (T.email = 'Adler@msn.com') or (T.age>=40))");
-            execute(statement, String.format("SELECT * FROM %s as T where T.last_name = 'Aa' OR T.first_name = 'Adam'", "\"" + MyPojo.class.getName() + "\""));
+//            execute(statement, String.format("SELECT * FROM %s as T where T.last_name = 'Aa' OR T.first_name = 'Adam'", "\"" + MyPojo.class.getName() + "\""));
 //            execute(statement, String.format("SELECT * FROM %s as T where T.age <= 40", "\"" + MyPojo.class.getName() + "\""));
 //            execute(statement, String.format("EXPLAIN PLAN FOR SELECT * FROM %s ", "\"" + MyPojo.class.getName() + "\""));
         }
@@ -60,16 +68,10 @@ public class MainCalciteTester {
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
         GigaSpace gigaSpace = new GigaSpaceConfigurer(configurer).gigaSpace();
-        if (embedded || gigaSpace.count(null) == 0) {
-            java.util.Date date1 = simpleDateFormat.parse("10/09/2001 05:20:00.231");
-            java.util.Date date2 = simpleDateFormat.parse("11/09/2001 10:20:00.250");
-            java.util.Date date3 = simpleDateFormat.parse("12/09/2001 15:20:00.100");
-            java.util.Date date4 = simpleDateFormat.parse("13/09/2001 20:20:00.300");
-            gigaSpace.write(new MyPojo("Adler Aa", 20, "Israel", date1, new Time(date1.getTime()), new Timestamp(date1.getTime())));
-            gigaSpace.write(new MyPojo("Adam Bb", 30, "Israel", date2, new Time(date2.getTime()), new Timestamp(date2.getTime())));
-            gigaSpace.write(new MyPojo("Eve Cc", 35, "UK", date3, new Time(date3.getTime()), new Timestamp(date3.getTime())));
-            gigaSpace.write(new MyPojo("NoCountry Dd", 40, null, date4, new Time(date4.getTime()), new Timestamp(date4.getTime())));
-        }
+        DataGenerator.writeProduct(gigaSpace);
+        DataGenerator.writePurchase(gigaSpace);
+        DataGenerator.writeCustomer(gigaSpace);
+        DataGenerator.writeInventory(gigaSpace);
         return gigaSpace;
     }
 }

@@ -29,8 +29,6 @@ public class RelNodePhysicalPlanHandler implements PhysicalPlanHandler<GSRelNode
             private final Deque<Object> stack = new ArrayDeque<>();
             @Override
             public RelNode visit(TableScan scan) {
-                System.out.println(">>> SCAN " + scan);
-                // TODO: Extract type and column info, put to stack.
                 GSTable table = scan.getTable().unwrap(GSTable.class);
                 stack.push(table);
                 return scan;
@@ -38,7 +36,6 @@ public class RelNodePhysicalPlanHandler implements PhysicalPlanHandler<GSRelNode
             @Override
             public RelNode visit(RelNode other) {
                 RelNode res = super.visit(other);
-                System.out.println(">>> OTHER " + other);
                 if (other instanceof GSCalc) {
                     GSCalc calc = (GSCalc) other;
                     GSTable table = (GSTable) stack.pop();
@@ -52,11 +49,7 @@ public class RelNodePhysicalPlanHandler implements PhysicalPlanHandler<GSRelNode
                         String originalName = inputFields.get(program.getSourceField(i));
                         tableContainer.addQueryColumn(originalName, alias, true);
                     }
-                    RexHandler rexHandler = new RexHandler(program);
-                    for (RexNode expr : program.getExprList()) {
-                        expr.accept(rexHandler);
-                    }
-                    ConditionHandler conditionHandler = new ConditionHandler(program, queryExecutor, rexHandler.getFields());
+                    ConditionHandler conditionHandler = new ConditionHandler(program, queryExecutor, inputFields);
                     if (program.getCondition() != null) {
                         program.getCondition().accept(conditionHandler);
                         for (Map.Entry<TableContainer, QueryTemplatePacket> tableContainerQueryTemplatePacketEntry : conditionHandler.getQTPMap().entrySet()) {

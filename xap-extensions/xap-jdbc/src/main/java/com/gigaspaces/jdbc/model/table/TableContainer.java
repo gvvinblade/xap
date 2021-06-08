@@ -15,6 +15,7 @@ public abstract class TableContainer {
 
     private Expression exprTree;
     private final List<OrderColumn> orderColumns = new ArrayList<>();
+    private final List<QueryColumn> groupByColumns = new ArrayList<>();
 
     public abstract QueryResult executeRead(QueryExecutionConfig config) throws SQLException;
 
@@ -65,7 +66,15 @@ public abstract class TableContainer {
         this.orderColumns.add(orderColumn);
     }
 
+    public void addGroupByColumns(QueryColumn groupByColumn) {
+        this.groupByColumns.add(groupByColumn);
+    }
+
     public List<OrderColumn> getOrderColumns() {
         return orderColumns;
+    }
+
+    public List<QueryColumn> getGroupByColumns() {
+        return groupByColumns;
     }
 }

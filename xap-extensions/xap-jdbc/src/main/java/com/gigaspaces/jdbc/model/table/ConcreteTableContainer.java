@@ -11,9 +11,7 @@ import com.gigaspaces.jdbc.model.QueryExecutionConfig;
 import com.gigaspaces.jdbc.model.join.JoinInfo;
 import com.gigaspaces.jdbc.model.result.ExplainPlanResult;
 import com.gigaspaces.jdbc.model.result.QueryResult;
-import com.gigaspaces.query.aggregators.AggregationSet;
-import com.gigaspaces.query.aggregators.OrderBy;
-import com.gigaspaces.query.aggregators.OrderByAggregator;
+import com.gigaspaces.query.aggregators.*;
 import com.j_spaces.core.IJSpace;
 import com.j_spaces.core.client.Modifiers;
 import com.j_spaces.core.client.ReadModifiers;
@@ -82,9 +80,10 @@ public class ConcreteTableContainer extends TableContainer {
                 modifiers = Modifiers.add(modifiers, Modifiers.EXPLAIN_PLAN);
                 modifiers = Modifiers.add(modifiers, Modifiers.DRY_RUN);
             }
-            // When we use join, we sort the results on the client side instead of on the server.
+            // When we use join, we sort and group the results on the client side instead of on the server.
             if(!config.isJoinUsed()) {
                 setOrderByAggregation();
+                setGroupByAggregation();
             }
             queryTemplatePacket.prepareForSpace(typeDesc);
 
@@ -107,7 +106,35 @@ public class ConcreteTableContainer extends TableContainer {
             for (OrderColumn column : getOrderColumns()) {
                 orderByAggregator.orderBy(column.getName(), column.isAsc() ? OrderBy.ASC : OrderBy.DESC, column.isNullsLast());
             }
-            queryTemplatePacket.setAggregationSet(new AggregationSet().orderBy(orderByAggregator));
+
+            if( queryTemplatePacket.getAggregationSet() == null ) {
+                AggregationSet aggregationSet = new AggregationSet().orderBy(orderByAggregator);
+                queryTemplatePacket.setAggregationSet(aggregationSet);
+            }
+            else{
+                queryTemplatePacket.getAggregationSet().add(orderByAggregator);
+            }
+        }
+    }
+
+    private void setGroupByAggregation() {
+        //groupBy in server
+        List<QueryColumn> groupByColumns = getGroupByColumns();
+        if(!groupByColumns.isEmpty()){
+            int groupByColumnsCount = groupByColumns.size();
+            String[] groupByColumnsArray = new String[ groupByColumnsCount ];
+            for ( int i=0; i < groupByColumnsCount; i++) {
+                groupByColumnsArray[ i ] = groupByColumns.get( i ).getName();
+            }
+
+            DistinctAggregator distinctAggregator = new DistinctAggregator().distinct(limit, groupByColumnsArray);
+            if( queryTemplatePacket.getAggregationSet() == null ) {
+                AggregationSet aggregationSet = new AggregationSet().distinct( distinctAggregator );
+                queryTemplatePacket.setAggregationSet(aggregationSet);
+            }
+            else{
+                queryTemplatePacket.getAggregationSet().add(distinctAggregator);
+            }
         }
     }
 

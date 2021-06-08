@@ -75,7 +75,7 @@ public class IOUtils {
     private static final IClassSerializer<?> _defaultSerializer = ObjectClassSerializer.instance;
     private static final IClassSerializer<?> _nullSerializer = new NullClassSerializer<>();
     private static final IClassSerializer<?> _smartExternalizableSerializer = SmartExternalizableSerializer.instance;
-    public static final boolean SMART_EXTERNALIZABLE_ENABLED = GsEnv.propertyBoolean(SystemProperties.SMART_EXTERNALIZABLE_ENABLED).get(true);
+    public static final boolean SMART_EXTERNALIZABLE_ENABLED = GsEnv.propertyBoolean(SystemProperties.SMART_EXTERNALIZABLE_ENABLED).get(false);
 
     static {
         _typeCache = new HashMap<Class<?>, IClassSerializer<?>>();

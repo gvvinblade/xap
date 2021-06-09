@@ -91,7 +91,7 @@ public class ConcreteTableContainer extends TableContainer {
             if (explainPlanImpl != null) {
                 queryResult = new ExplainPlanResult(visibleColumns, explainPlanImpl.getExplainPlanInfo(), this);
             } else {
-                queryResult = new QueryResult(res, visibleColumns, this, getOrderColumns());
+                queryResult = new QueryResult(res, visibleColumns, this, getOrderColumns(), getGroupByColumns());
             }
             return queryResult;
         } catch (Exception e) {

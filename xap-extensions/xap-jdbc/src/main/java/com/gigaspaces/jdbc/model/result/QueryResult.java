@@ -8,9 +8,7 @@ import com.gigaspaces.jdbc.model.table.TableContainer;
 import com.j_spaces.jdbc.ResultEntry;
 import com.j_spaces.jdbc.query.IQueryResultSet;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -21,10 +19,10 @@ public class QueryResult {
     private Cursor<TableRow> cursor;
 
     public QueryResult(IQueryResultSet<IEntryPacket> res, List<QueryColumn> queryColumns,
-                       TableContainer tableContainer, List<OrderColumn> orderColumns) {
+                       TableContainer tableContainer, List<OrderColumn> orderColumns,  List<QueryColumn> groupByColumns) {
         this.queryColumns = filterNonVisibleColumns(queryColumns);
         this.tableContainer = tableContainer;
-        this.rows = res.stream().map(x -> new TableRow(x, queryColumns, orderColumns)).collect(Collectors.toList());
+        this.rows = res.stream().map(x -> new TableRow(x, queryColumns, orderColumns, groupByColumns)).collect(Collectors.toList());
     }
 
     public QueryResult(List<QueryColumn> queryColumns) {
@@ -33,10 +31,10 @@ public class QueryResult {
         this.rows = new ArrayList<>();
     }
 
-    public QueryResult(List<QueryColumn> visibleColumns, QueryResult tableResult, List<OrderColumn> orderColumns) {
+    public QueryResult(List<QueryColumn> visibleColumns, QueryResult tableResult, List<OrderColumn> orderColumns, List<QueryColumn> groupByColumns) {
         this.tableContainer = null;
         this.queryColumns = visibleColumns;
-        this.rows = tableResult.rows.stream().map(row -> new TableRow(row, visibleColumns, orderColumns)).collect(Collectors.toList());
+        this.rows = tableResult.rows.stream().map(row -> new TableRow(row, visibleColumns, orderColumns, groupByColumns)).collect(Collectors.toList());
     }
 
     private List<QueryColumn> filterNonVisibleColumns(List<QueryColumn> queryColumns){
@@ -150,5 +148,26 @@ public class QueryResult {
 
     public void sort(){
         Collections.sort(rows);
+    }
+
+    public void groupBy(){
+
+        Map<Object,TableRow> tableRows = new HashMap<>();
+        for( TableRow tableRow : rows ){
+            Object[] groupByValues = tableRow.getGroupByValues();
+            if( groupByValues.length > 0 ){
+                if(groupByValues.length == 1){
+                    //in the case of single value in groupByValues array use this value as a key in order to prevent list creation
+                    tableRows.put(groupByValues[0], tableRow);
+                }
+                else {
+                    //create key based on array of values
+                    tableRows.put(Arrays.asList(groupByValues), tableRow);
+                }
+            }
+        }
+        if( !tableRows.isEmpty() ) {
+            rows = new ArrayList<>(tableRows.values());
+        }
     }
 }

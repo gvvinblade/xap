@@ -12,7 +12,7 @@ public class ShortPrimitiveClassSerializer implements IClassSerializer<Short> {
 
     public static final ShortPrimitiveClassSerializer instance = new ShortPrimitiveClassSerializer();
 
-    private ShortPrimitiveClassSerializer() {
+    public ShortPrimitiveClassSerializer() {
     }
 
     public byte getCode() {

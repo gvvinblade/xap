@@ -12,7 +12,7 @@ public class IntPrimitiveClassSerializer implements IClassSerializer<Integer> {
 
     public static final IntPrimitiveClassSerializer instance = new IntPrimitiveClassSerializer();
 
-    private IntPrimitiveClassSerializer() {
+    public IntPrimitiveClassSerializer() {
     }
 
     public byte getCode() {

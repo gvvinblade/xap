@@ -12,7 +12,7 @@ public class CharPrimitiveClassSerializer implements IClassSerializer<Character>
 
     public static final CharPrimitiveClassSerializer instance = new CharPrimitiveClassSerializer();
 
-    private CharPrimitiveClassSerializer() {
+    public CharPrimitiveClassSerializer() {
     }
 
     public byte getCode() {

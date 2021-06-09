@@ -12,7 +12,7 @@ public class DoublePrimitiveClassSerializer implements IClassSerializer<Double> 
 
     public static final DoublePrimitiveClassSerializer instance = new DoublePrimitiveClassSerializer();
 
-    private DoublePrimitiveClassSerializer() {
+    public DoublePrimitiveClassSerializer() {
     }
 
     public byte getCode() {

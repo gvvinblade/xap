@@ -12,7 +12,7 @@ public class LongPrimitiveClassSerializer implements IClassSerializer<Long> {
 
     public static final LongPrimitiveClassSerializer instance = new LongPrimitiveClassSerializer();
 
-    private LongPrimitiveClassSerializer() {
+    public LongPrimitiveClassSerializer() {
     }
 
     public byte getCode() {

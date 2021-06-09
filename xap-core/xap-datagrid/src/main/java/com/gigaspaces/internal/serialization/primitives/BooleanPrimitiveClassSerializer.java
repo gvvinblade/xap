@@ -12,7 +12,7 @@ public class BooleanPrimitiveClassSerializer implements IClassSerializer<Boolean
 
     public static final BooleanPrimitiveClassSerializer instance = new BooleanPrimitiveClassSerializer();
 
-    private BooleanPrimitiveClassSerializer() {
+    public BooleanPrimitiveClassSerializer() {
     }
 
     public byte getCode() {

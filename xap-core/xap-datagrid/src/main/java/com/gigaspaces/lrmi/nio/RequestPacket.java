@@ -234,12 +234,17 @@ public class RequestPacket implements IPacket {
                         ClassLoaderHelper.setContextClassLoader(unmarshallClassLoader, true /*ignore security*/);
 
                     try {
-                        if (IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED) {
+                        boolean newSer = IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED;
+                        if (newSer) {
+                            _contextLogger.info("RequestPacket.readExternal.new: {}", invokeMethod.realMethodString);
                             args = invokeMethod.readRequest(in);
                         } else {
+                            _contextLogger.info("RequestPacket.readExternal.old: {}", invokeMethod.realMethodString);
                             args = new Object[types.length];
-                            for (int i = 0; i < types.length; i++)
+                            for (int i = 0; i < types.length; i++) {
                                 args[i] = IOUtils.unmarshalValue(types[i], in);
+                                _contextLogger.info("RequestPacket.readExternal.old: unmarshalled arg #{} type {} val {}", i, types[i], args[i]);
+                            }
                         }
                         //Update context for debug logging purpose
                         if (logContext) {
@@ -279,12 +284,16 @@ public class RequestPacket implements IPacket {
                 IOUtils.writeRepetitiveString(out, "");
             }
 
-            if (IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED) {
+            boolean newSer = IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED;
+            if (newSer) {
+                _contextLogger.info("RequestPacket.writeExternal.new: {}", invokeMethod.realMethodString);
                 invokeMethod.writeRequest(out, args);
             } else {
+                _contextLogger.info("RequestPacket.writeExternal.old: {}", invokeMethod.realMethodString);
                 Class<?>[] types = invokeMethod.methodTypes;
                 for (int i = 0; i < types.length; i++) {
                     IOUtils.marshalValue(types[i], args[i], out);
+                    _contextLogger.info("RequestPacket.writeRequest.old: marshalled arg #{} type {} val {}", i, types[i], args[i]);
                 }
             }
         }

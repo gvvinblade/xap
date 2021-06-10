@@ -29,6 +29,8 @@ import com.gigaspaces.internal.serialization.ObjectClassSerializer;
 import com.gigaspaces.internal.serialization.SmartExternalizableSerializer;
 import com.gigaspaces.internal.serialization.primitives.*;
 import com.gigaspaces.serialization.SmartExternalizable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -41,6 +43,7 @@ import java.io.IOException;
  */
 @com.gigaspaces.api.InternalApi
 public class LRMIMethod {
+    private static final Logger logger = LoggerFactory.getLogger(LRMIMethod.class);
     private static final IClassSerializer<?> smartExternalizableSerializer = SmartExternalizableSerializer.instance;
     private static final IClassSerializer<?> objectSerializer = ObjectClassSerializer.instance;
 
@@ -147,6 +150,7 @@ public class LRMIMethod {
             if (serializer == smartExternalizableSerializer && !IOUtils.targetSupportsSmartExternalizable())
                 serializer = objectSerializer;
             serializer.write(out, args[i]);
+            logger.info("RequestPacket.writeExternal.new: marshalled arg #{} serializer {} val {}", i, serializer, args[i]);
         }
     }
 
@@ -158,6 +162,7 @@ public class LRMIMethod {
             if (serializer == smartExternalizableSerializer && !IOUtils.targetSupportsSmartExternalizable())
                 serializer = objectSerializer;
             args[i] = serializer.read(in);
+            logger.info("RequestPacket.readExternal.new: unmarshalled arg #{} serializer {} val {}", i, serializer, args[i]);
         }
         return args;
     }

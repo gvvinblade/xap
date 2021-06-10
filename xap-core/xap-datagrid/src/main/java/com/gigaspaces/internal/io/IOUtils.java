@@ -1056,6 +1056,85 @@ public class IOUtils {
         return l;
     }
 
+    /**
+     * Marshals <code>value</code> to an <code>ObjectOutputStream</code> stream, <code>out</code>,
+     * using RMI's serialization format for arguments or return values.  For primitive types, the
+     * primitive type's class should be specified (i.e., for the type <code>int</code>, specify
+     * <code>int.class</code>), and the primitive value should be wrapped in instances of the
+     * appropriate wrapper class, such as <code>java.lang.Integer</code> or
+     * <code>java.lang.Boolean</code>.
+     *
+     * @param type  <code>Class</code> object for the value to be marshalled
+     * @param value value to marshal
+     * @param out   stream to which the value is marshalled
+     * @throws IOException if an I/O error occurs marshalling the value to the output stream
+     **/
+    public static void marshalValue(Class type, Object value, ObjectOutput out)
+            throws IOException {
+        //TODO cache isPrimitive because it appear in profiling
+        if (type.isPrimitive()) {
+            if (type == int.class) {
+                out.writeInt(((Integer) value).intValue());
+            } else if (type == boolean.class) {
+                out.writeBoolean(((Boolean) value).booleanValue());
+            } else if (type == long.class) {
+                out.writeLong(((Long) value).longValue());
+            } else if (type == short.class) {
+                out.writeShort(((Short) value).shortValue());
+            } else if (type == float.class) {
+                out.writeFloat(((Float) value).floatValue());
+            } else if (type == double.class) {
+                out.writeDouble(((Double) value).doubleValue());
+            } else if (type == char.class) {
+                out.writeChar(((Character) value).charValue());
+            } else if (type == byte.class) {
+                out.writeByte(((Byte) value).byteValue());
+            } else {
+                throw new AssertionError("Unrecognized primitive type: " + type);
+            }
+        } else {
+            out.writeObject(value);
+        }
+    }
+
+    /**
+     * Unmarshals a value of the specified <code>type</code> from the <code>ObjectInputStream</code>
+     * stream, <code>in</code>, using RMI's serialization format for arguments or return values and
+     * returns the result.  For primitive types, the primitive type's class should be specified
+     * (i.e., for the primitive type <code>int</code>, specify <code>int.class</code>).
+     *
+     * @param type <code>Class</code> object for the value to be unmarshalled
+     * @param in   stream from which the value is unmarshalled
+     * @return value unmarshalled from the input stream
+     * @throws IOException            if an I/O error occurs marshalling the value to the output
+     *                                stream
+     * @throws ClassNotFoundException if the <code>type</code>'s class could not	be found
+     **/
+    public static Object unmarshalValue(Class type, ObjectInput in)
+            throws IOException, ClassNotFoundException {
+        if (type.isPrimitive()) {
+            if (type == int.class)
+                return in.readInt();
+            if (type == boolean.class)
+                return in.readBoolean();
+            if (type == long.class)
+                return in.readLong();
+            if (type == short.class)
+                return in.readShort();
+            if (type == float.class)
+                return in.readFloat();
+            if (type == double.class)
+                return in.readDouble();
+            if (type == char.class)
+                return in.readChar();
+            if (type == byte.class)
+                return in.readByte();
+
+            throw new AssertionError("Unrecognized primitive type: " + type);
+        }
+        return in.readObject();
+    }
+
     public static Map<Class<?>, IClassSerializer<?>> getClassSerializers() {
         return _typeCache;
     }

@@ -225,14 +225,22 @@ public class RequestPacket implements IPacket {
                 /* unmarsh method values with ClassLoader of target invocation object */
                 ClassLoader unmarshallClassLoader = entry.getExportedThreadClassLoader();
 
-                if (invokeMethod.getNumOfArguments() != 0) {
+                Class<?>[] types = invokeMethod.methodTypes;
+
+                if (types.length > 0) {
                     ClassLoader orgThreadCL = Thread.currentThread().getContextClassLoader();
                     final boolean changeCL = orgThreadCL != unmarshallClassLoader;
                     if (changeCL)
                         ClassLoaderHelper.setContextClassLoader(unmarshallClassLoader, true /*ignore security*/);
 
                     try {
-                        args = invokeMethod.readRequest(in);
+                        if (IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED) {
+                            args = invokeMethod.readRequest(in);
+                        } else {
+                            args = new Object[types.length];
+                            for (int i = 0; i < types.length; i++)
+                                args[i] = IOUtils.unmarshalValue(types[i], in);
+                        }
                         //Update context for debug logging purpose
                         if (logContext) {
                             LRMIInvocationContext currentContext = LRMIInvocationContext.getCurrentContext();
@@ -271,7 +279,14 @@ public class RequestPacket implements IPacket {
                 IOUtils.writeRepetitiveString(out, "");
             }
 
-            invokeMethod.writeRequest(out, args);
+            if (IOUtils.targetSupportsSmartExternalizable() && IOUtils.SMART_EXTERNALIZABLE_ENABLED) {
+                invokeMethod.writeRequest(out, args);
+            } else {
+                Class<?>[] types = invokeMethod.methodTypes;
+                for (int i = 0; i < types.length; i++) {
+                    IOUtils.marshalValue(types[i], args[i], out);
+                }
+            }
         }
     }
 

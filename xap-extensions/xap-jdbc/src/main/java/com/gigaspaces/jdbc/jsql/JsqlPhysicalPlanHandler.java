@@ -1,6 +1,5 @@
 package com.gigaspaces.jdbc.jsql;
 
-import com.gigaspaces.jdbc.PhysicalPlanHandler;
 import com.gigaspaces.jdbc.QueryExecutor;
 import com.gigaspaces.jdbc.exceptions.SQLExceptionWrapper;
 import com.gigaspaces.jdbc.model.join.JoinInfo;
@@ -19,7 +18,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-public class JsqlPhysicalPlanHandler extends SelectVisitorAdapter implements PhysicalPlanHandler<SelectBody>,FromItemVisitor {
+public class JsqlPhysicalPlanHandler extends SelectVisitorAdapter implements FromItemVisitor {
     private final QueryExecutor queryExecutor;
 
     public JsqlPhysicalPlanHandler(QueryExecutor queryExecutor) {
@@ -135,7 +134,6 @@ public class JsqlPhysicalPlanHandler extends SelectVisitorAdapter implements Phy
         throw new UnsupportedOperationException("Unsupported yet!");
     }
 
-    @Override
     public QueryExecutor prepareForExecution(SelectBody selectBody) {
         selectBody.accept(this);
         return queryExecutor;

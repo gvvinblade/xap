@@ -1,31 +1,26 @@
 package com.gigaspaces.jdbc;
 
-import com.gigaspaces.jdbc.calcite.*;
+import com.gigaspaces.jdbc.calcite.CalciteRootVisitor;
+import com.gigaspaces.jdbc.calcite.GSOptimizer;
+import com.gigaspaces.jdbc.calcite.GSRelNode;
 import com.gigaspaces.jdbc.exceptions.SQLExceptionWrapper;
-import com.gigaspaces.jdbc.exceptions.GenericJdbcException;
 import com.gigaspaces.jdbc.jsql.JsqlPhysicalPlanHandler;
 import com.gigaspaces.jdbc.model.QueryExecutionConfig;
 import com.gigaspaces.jdbc.model.result.QueryResult;
 import com.j_spaces.core.IJSpace;
 import com.j_spaces.jdbc.ResponsePacket;
-import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import com.sun.xml.internal.bind.v2.TODO;
 import net.sf.jsqlparser.parser.feature.Feature;
 import net.sf.jsqlparser.statement.ExplainStatement;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.util.validation.ValidationContext;
 import net.sf.jsqlparser.util.validation.ValidationException;
 import net.sf.jsqlparser.util.validation.feature.FeaturesAllowed;
 import net.sf.jsqlparser.util.validation.validator.StatementValidator;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
-import org.apache.calcite.rel.logical.ToLogicalConverter;
-import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
 
@@ -42,7 +37,7 @@ public class QueryHandler {
     public ResponsePacket handle(String query, IJSpace space, Object[] preparedValues) throws SQLException {
         GSRelNode calcitePlan = optimizeWithCalcite(query, space);
         return executeStatement(space, calcitePlan, preparedValues);
-
+        // TODO create a flag to toggle between calcite/jsql
 //        try {
 //            Statement statement = CCJSqlParserUtil.parse(query);
 //            validateStatement(statement);
@@ -59,8 +54,8 @@ public class QueryHandler {
     private ResponsePacket  executeStatement(IJSpace space, GSRelNode relNode, Object[] preparedValues) throws SQLException {
         ResponsePacket packet = new ResponsePacket();
         QueryExecutor qE = new QueryExecutor(space, preparedValues);
-        RelNodePhysicalPlanHandler planHandler = new RelNodePhysicalPlanHandler(qE);
-        qE = planHandler.prepareForExecution(relNode);
+        CalciteRootVisitor calciteRootVisitor = new CalciteRootVisitor(qE);
+        relNode.accept(calciteRootVisitor);
         QueryResult queryResult = qE.execute();
         packet.setResultEntry(queryResult.convertEntriesToResultArrays(null));
         return packet;
@@ -76,7 +71,7 @@ public class QueryHandler {
                 QueryExecutor qE = new QueryExecutor(space, config, preparedValues);
                 QueryResult res;
                 try {
-                    PhysicalPlanHandler<SelectBody> physicalPlanHandler = new JsqlPhysicalPlanHandler(qE);
+                    JsqlPhysicalPlanHandler physicalPlanHandler = new JsqlPhysicalPlanHandler(qE);
                     qE = physicalPlanHandler.prepareForExecution(explainStatement.getStatement().getSelectBody());
                     res = qE.execute();
                     packet.setResultEntry(res.convertEntriesToResultArrays(config));
@@ -90,7 +85,7 @@ public class QueryHandler {
                 QueryExecutor qE = new QueryExecutor(space, preparedValues);
                 QueryResult res;
                 try {
-                    PhysicalPlanHandler<SelectBody> physicalPlanHandler = new JsqlPhysicalPlanHandler(qE);
+                    JsqlPhysicalPlanHandler physicalPlanHandler = new JsqlPhysicalPlanHandler(qE);
                     qE = physicalPlanHandler.prepareForExecution(select.getSelectBody());
                     res = qE.execute();
                     packet.setResultEntry(res.convertEntriesToResultArrays(null));

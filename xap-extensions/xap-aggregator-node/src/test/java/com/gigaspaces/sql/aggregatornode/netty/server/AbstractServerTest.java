@@ -35,8 +35,6 @@ public class AbstractServerTest {
             url += "&preferQueryMode=simple";
 
         final Connection conn = DriverManager.getConnection(url);
-        assertFalse(conn.isClosed());
-        assertTrue(conn.isValid(1000));
         return conn;
     }
 }

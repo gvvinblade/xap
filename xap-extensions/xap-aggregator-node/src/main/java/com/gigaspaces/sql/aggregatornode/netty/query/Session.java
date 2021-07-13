@@ -7,12 +7,15 @@ import com.j_spaces.core.client.SpaceFinder;
 
 import java.io.Closeable;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import static com.gigaspaces.sql.aggregatornode.netty.utils.Constants.*;
 
 public class Session implements Closeable {
     private Charset charset = DEFAULT_CHARSET;
+    private String charsetName = DEFAULT_CHARSET.name();
     private String dateStyle = DEFAULT_DATE_STYLE;
     private TimeZone timeZone = DEFAULT_TIME_ZONE;
     private String username = "";
@@ -24,6 +27,22 @@ public class Session implements Closeable {
         if (dateTimeUtils == null)
             dateTimeUtils = new DateTimeUtils(this);
         return dateTimeUtils;
+    }
+
+    public void setCharsetByName(String charsetName) {
+        switch (charsetName.toUpperCase(Locale.ROOT)) {
+            case "UNICODE":
+            case "UTF8":
+                charset = StandardCharsets.UTF_8;
+                break;
+            default:
+                charset = Charset.forName(charsetName);
+        }
+        this.charsetName = charsetName;
+    }
+
+    public String getCharsetName() {
+        return charsetName;
     }
 
     public Charset getCharset() {

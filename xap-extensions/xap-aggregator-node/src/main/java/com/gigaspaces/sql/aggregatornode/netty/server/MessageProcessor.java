@@ -14,7 +14,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 
-import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.TimeZone;
@@ -386,7 +385,7 @@ public class MessageProcessor extends ChannelInboundHandlerAdapter {
         switch (version) {
             case PROTOCOL_3_0:
                 initRead = true;
-                Charset newCharset = null;
+                String charsetName = null;
                 while (msg.getByte(msg.readerIndex()) > 0) {
                     String key = readString(msg);
                     String value = readString(msg);
@@ -407,7 +406,7 @@ public class MessageProcessor extends ChannelInboundHandlerAdapter {
                                     && value.charAt(length - 1) == '\'') {
                                 value = value.substring(1, length - 1);
                             }
-                            newCharset = Charset.forName(value);
+                            charsetName = value;
                             break;
                         }
                         case "DateStyle": {
@@ -430,8 +429,8 @@ public class MessageProcessor extends ChannelInboundHandlerAdapter {
                     }
                 }
 
-                if (newCharset != null)
-                    session.setCharset(newCharset);
+                if (charsetName != null)
+                    session.setCharsetByName(charsetName);
 
                 // request clear text password
                 if (authProvider == AuthenticationProvider.NO_OP_PROVIDER)
@@ -462,7 +461,7 @@ public class MessageProcessor extends ChannelInboundHandlerAdapter {
     private void onAuthenticationOK(ChannelHandlerContext ctx) throws ProtocolException {
         ByteBuf buf = ctx.alloc().ioBuffer();
         writeAuthenticationOK(buf);
-        writeParameterStatus(buf, "client_encoding", session.getCharset().name());
+        writeParameterStatus(buf, "client_encoding", session.getCharsetName());
         writeParameterStatus(buf, "DateStyle", session.getDateStyle());
         writeParameterStatus(buf, "is_superuser", "off");
         writeParameterStatus(buf, "server_encoding", "SQL_ASCII");

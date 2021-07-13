@@ -16,7 +16,19 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <xap.dep.scope>provided</xap.dep.scope>
+        <postgresql.groupId>org.postgresql</postgresql.groupId>
+        <postgresql.version>42.2.20</postgresql.version>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>postgresql-old-driver</id>
+            <properties>
+                <postgresql.groupId>postgresql</postgresql.groupId>
+                <postgresql.version>8.2-507.jdbc4</postgresql.version>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -100,9 +112,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.postgresql</groupId>
+            <groupId>${postgresql.groupId}</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.2.20</version>
+            <version>${postgresql.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

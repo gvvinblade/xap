@@ -42,7 +42,6 @@ class ServerBeanTest extends AbstractServerTest{
     void testConnection(boolean simple) throws Exception {
         try (Connection conn = connect(simple)) {
             assertFalse(conn.isClosed());
-            assertTrue(conn.isValid(1000));
         }
     }
 
@@ -51,7 +50,7 @@ class ServerBeanTest extends AbstractServerTest{
     void testSet(boolean simple) throws Exception {
         try (Connection conn = connect(simple)) {
             final Statement statement = conn.createStatement();
-            assertEquals(1, statement.executeUpdate("SET DateStyle = 'ISO'"));
+            assertFalse(statement.execute("SET DateStyle = 'ISO'")); // false mean the statement doesn't return a result set
         }
     }
 
@@ -129,7 +128,7 @@ class ServerBeanTest extends AbstractServerTest{
 
             qry = "SET TimeZone='GMT-1'"; // PG uses posix timezones which are negated
             try (PreparedStatement statement = conn.prepareStatement(qry)) {
-                assertEquals(1, statement.executeUpdate());
+                statement.execute();
             }
 
             qry = String.format("SELECT \"timestamp\" FROM \"%s\" where first_name = 'Adam'", MyPojo.class.getName());
@@ -170,7 +169,7 @@ class ServerBeanTest extends AbstractServerTest{
             String expected = "" +
 "| oid  | typname           | typnamespace | typowner | typlen | typbyval | typtype | typisdefined | typdelim | typrelid | typelem | typinput | typoutput | typreceive | typsend | typanalyze | typalign | typstorage | typnotnull | typbasetype | typtypmod | typndims | typdefaultbin | typdefault |\n" +
 "| ---- | ----------------- | ------------ | -------- | ------ | -------- | ------- | ------------ | -------- | -------- | ------- | -------- | --------- | ---------- | ------- | ---------- | -------- | ---------- | ---------- | ----------- | --------- | -------- | ------------- | ---------- |\n" +
-"| 1028 | oid[]         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 26      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1028 | oid[]             | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 26      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 16   | bool              | -1000        | 0        | 1      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 17   | bytea             | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 1042 | bpchar            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
@@ -182,16 +181,16 @@ class ServerBeanTest extends AbstractServerTest{
 "| 22   | int2vector        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 21      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 23   | int4              | -1000        | 0        | 4      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 24   | regproc           | -1000        | 0        | 4      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 2201 | refcursor[]   | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1790    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 2201 | refcursor[]       | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1790    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 25   | text              | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 26   | oid               | -1000        | 0        | 4      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1182 | date[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1082    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1182 | date[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1082    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 30   | oidvector         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 26      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1183 | time[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1083    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1183 | time[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1083    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1184 | timestamptz       | -1000        | 0        | 8      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1185 | timestamptz[] | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1184    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1185 | timestamptz[]     | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1184    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1186 | interval          | -1000        | 0        | 16     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1187 | interval[]    | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1186    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1187 | interval[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1186    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1700 | numeric           | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 1082 | date              | -1000        | 0        | 4      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 1083 | time              | -1000        | 0        | 8      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
@@ -199,27 +198,27 @@ class ServerBeanTest extends AbstractServerTest{
 "| 701  | float8            | -1000        | 0        | 8      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 705  | unknown           | -1000        | 0        | -2     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
 "| 194  | pg_node_tree      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1231 | numeric[]     | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1700    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1231 | numeric[]         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1700    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1114 | timestamp         | -1000        | 0        | 8      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1115 | timestamp[]   | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1114    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1115 | timestamp[]       | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1114    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 2276 | any               | -1000        | 0        | 4      | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1000 | bool[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 16      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1001 | bytea[]       | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 17      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1002 | char[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 18      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1003 | name[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 19      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1005 | int2[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 21      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1006 | int2vector[]  | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 22      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1007 | int4[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 23      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1008 | regproc[]     | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 24      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1009 | text[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 25      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1000 | bool[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 16      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1001 | bytea[]           | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 17      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1002 | char[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 18      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1003 | name[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 19      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1005 | int2[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 21      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1006 | int2vector[]      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 22      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1007 | int4[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 23      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1008 | regproc[]         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 24      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1009 | text[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 25      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1266 | timetz            | -1000        | 0        | 12     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1014 | bpchar[]      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1042    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1270 | timetz[]      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1266    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1015 | varchar[]     | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1043    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1016 | int8[]        | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 20      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
-"| 1021 | float4[]      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 700     | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1014 | bpchar[]          | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1042    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1270 | timetz[]          | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1266    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1015 | varchar[]         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 1043    | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1016 | int8[]            | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 20      | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
+"| 1021 | float4[]          | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 700     | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n" +
 "| 1790 | refcursor         | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 0       | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 0        | null          | null       |\n" +
-"| 1022 | float8[]      | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 701     | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n";
+"| 1022 | float8[]          | -1000        | 0        | -1     | null     | b       | true         | ,        | 0        | 701     | 0        | 0         | 0          | 0       | 0          | c        | p          | false      | 0           | -1        | 1        | null          | null       |\n";
             DumpUtils.checkResult(res, expected);
         }
     }
@@ -319,10 +318,8 @@ class ServerBeanTest extends AbstractServerTest{
 "| Adler      | Aa        | Adler@msn.com | 20  |\n" +
 "| Adam       | Bb        | Adam@msn.com  | 30  |\n";
             DumpUtils.checkResult(res, expected);
-            statement.getMoreResults();
-            int updateCount = statement.getUpdateCount();
-            assertEquals(1, updateCount);
-            statement.getMoreResults();
+            assertFalse(statement.getMoreResults());
+            assertTrue(statement.getMoreResults());
             res = statement.getResultSet();
             expected = "" +
 "| transaction_isolation |\n" +

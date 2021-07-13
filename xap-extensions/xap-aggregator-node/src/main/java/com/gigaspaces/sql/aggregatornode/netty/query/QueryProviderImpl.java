@@ -11,7 +11,6 @@ import com.gigaspaces.sql.aggregatornode.netty.exception.NonBreakingException;
 import com.gigaspaces.sql.aggregatornode.netty.exception.ParseException;
 import com.gigaspaces.sql.aggregatornode.netty.exception.ProtocolException;
 import com.gigaspaces.sql.aggregatornode.netty.utils.*;
-import com.google.common.collect.ImmutableList;
 import com.j_spaces.jdbc.ResponsePacket;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -24,7 +23,6 @@ import org.slf4j.Logger;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,6 +36,7 @@ public class QueryProviderImpl implements QueryProvider {
 
     private static final int DML_SINGLE_VALUE_MODIFIED = 1;
     private static final String SELECT_NULL_NULL_NULL = "SELECT NULL, NULL, NULL";
+    private static final String SELECT_1 = "SELECT 1";
 
     private final CalciteQueryHandler handler;
 
@@ -135,24 +134,28 @@ public class QueryProviderImpl implements QueryProvider {
 
     @Override
     public List<Portal<?>> executeQueryMultiline(Session session, String query) throws ProtocolException {
-        log.debug("Executing query: {}", query);
-        if (query.equalsIgnoreCase(SELECT_NULL_NULL_NULL)) {
-            List<ColumnDescription> columns = ImmutableList.of(
-                    new ColumnDescription("column1", TypeUtils.PG_TYPE_UNKNOWN),
-                    new ColumnDescription("column2", TypeUtils.PG_TYPE_UNKNOWN),
-                    new ColumnDescription("column3", TypeUtils.PG_TYPE_UNKNOWN)
-            );
-            StatementDescription statementDescription = new StatementDescription(ParametersDescription.EMPTY, new RowDescription(columns));
-            StatementImpl statement = new StatementImpl(this, Constants.EMPTY_STRING, null, null, statementDescription);
-            ThrowingSupplier op = () -> singletonList(new Object[]{null, null, null}).iterator();
-            return Collections.singletonList(new QueryPortal(this, Constants.EMPTY_STRING, statement, PortalCommand.SELECT, EMPTY_INT_ARRAY, op));
-        }
         try {
-            // TODO possibly it's worth to add SqlEmptyNode to sql parser
             if (query.trim().isEmpty()) {
+                // TODO possibly it's worth to add SqlEmptyNode to sql parser
                 StatementImpl statement = new StatementImpl(this, Constants.EMPTY_STRING, null, null, StatementDescription.EMPTY);
                 EmptyPortal<Object> portal = new EmptyPortal<>(this, Constants.EMPTY_STRING, statement);
                 return Collections.singletonList(portal);
+            } else if (query.equalsIgnoreCase(SELECT_1)) {
+                StatementDescription description = new StatementDescription(
+                        new ColumnDescription("column1", TypeUtils.PG_TYPE_INT4)
+                );
+                Statement statement = new MockStatement(this, Constants.EMPTY_STRING, description,
+                        () -> singletonList(new Object[]{1}).iterator());
+                return Collections.singletonList(preparePortal(session, Constants.EMPTY_STRING, statement, Constants.EMPTY_OBJECT_ARRAY, EMPTY_INT_ARRAY));
+            } else if (query.equalsIgnoreCase(SELECT_NULL_NULL_NULL)) {
+                StatementDescription description = new StatementDescription(
+                        new ColumnDescription("column1", TypeUtils.PG_TYPE_UNKNOWN),
+                        new ColumnDescription("column2", TypeUtils.PG_TYPE_UNKNOWN),
+                        new ColumnDescription("column3", TypeUtils.PG_TYPE_UNKNOWN)
+                );
+                Statement statement = new MockStatement(this, Constants.EMPTY_STRING, description,
+                        () -> singletonList(new Object[]{null, null, null}).iterator());
+                return Collections.singletonList(preparePortal(session, Constants.EMPTY_STRING, statement, Constants.EMPTY_OBJECT_ARRAY, EMPTY_INT_ARRAY));
             }
 
             GSOptimizer optimizer = new GSOptimizer(session.getSpace());
@@ -173,13 +176,28 @@ public class QueryProviderImpl implements QueryProvider {
     }
 
     private StatementImpl prepareStatement(Session session, String name, String query, int[] paramTypes) throws ParseException {
-        // TODO possibly it's worth to add SqlEmptyNode to sql parser
-        if (query.trim().isEmpty()) {
-            assert paramTypes.length == 0;
-            return new StatementImpl(this, name, null, null, StatementDescription.EMPTY);
-        }
-        GSOptimizer optimizer = new GSOptimizer(session.getSpace());
         try {
+            if (query.trim().isEmpty()) {
+                // TODO possibly it's worth to add SqlEmptyNode to sql parser
+                return new StatementImpl(this, name, null, null, StatementDescription.EMPTY);
+            } else if (query.equalsIgnoreCase(SELECT_1)) {
+                StatementDescription description = new StatementDescription(
+                        new ColumnDescription("column1", TypeUtils.PG_TYPE_INT4)
+                );
+                return new MockStatement(this, name, description,
+                        () -> singletonList(new Object[]{1}).iterator());
+            } else if (query.equalsIgnoreCase(SELECT_NULL_NULL_NULL)) {
+                StatementDescription description = new StatementDescription(
+                        new ColumnDescription("column1", TypeUtils.PG_TYPE_UNKNOWN),
+                        new ColumnDescription("column2", TypeUtils.PG_TYPE_UNKNOWN),
+                        new ColumnDescription("column3", TypeUtils.PG_TYPE_UNKNOWN)
+                );
+                return new MockStatement(this, name, description,
+                        () -> singletonList(new Object[]{null, null, null}).iterator());
+            }
+
+            GSOptimizer optimizer = new GSOptimizer(session.getSpace());
+
             return prepareStatement(session, name, optimizer, paramTypes, optimizer.parse(query));
         } catch (CalciteException | SqlParseException e) {
             throw new ParseException(e.getMessage(), e);
@@ -262,6 +280,10 @@ public class QueryProviderImpl implements QueryProvider {
             return prepareShowOption(session, name, statement, (SqlShowOption) query);
         }
 
+        if (statement instanceof MockStatement) {
+            return new QueryPortal(this, name, statement, PortalCommand.SELECT, formatCodes, (MockStatement) statement);
+        }
+
         if (query.isA(SqlKind.QUERY)) {
             return prepareQuery(session, name, statement, params, formatCodes, query);
         }
@@ -302,7 +324,7 @@ public class QueryProviderImpl implements QueryProvider {
                 String val = asString(literal);
                 ThrowingSupplier<Integer, ProtocolException> op = () -> {
                     try {
-                        session.setCharset(Charset.forName(val));
+                        session.setCharsetByName(val);
                     } catch (Exception e) {
                         throw new NonBreakingException(ErrorCodes.INVALID_PARAMETER_VALUE, literal.getParserPosition(), "Unknown charset");
                     }

@@ -10,6 +10,7 @@ import com.gigaspaces.sql.aggregatornode.netty.exception.NonBreakingException;
 import com.gigaspaces.sql.aggregatornode.netty.exception.ParseException;
 import com.gigaspaces.sql.aggregatornode.netty.exception.ProtocolException;
 import com.gigaspaces.sql.aggregatornode.netty.utils.*;
+import com.google.common.collect.ImmutableList;
 import com.j_spaces.jdbc.ResponsePacket;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -125,6 +126,17 @@ public class QueryProviderImpl implements QueryProvider {
 
     @Override
     public List<Portal<?>> executeQueryMultiline(Session session, String query) throws ProtocolException {
+        if (query.equalsIgnoreCase(SELECT_NULL_NULL_NULL)) {
+            List<ColumnDescription> columns = ImmutableList.of(
+                    new ColumnDescription("column1", TypeUtils.PG_TYPE_UNKNOWN),
+                    new ColumnDescription("column2", TypeUtils.PG_TYPE_UNKNOWN),
+                    new ColumnDescription("column3", TypeUtils.PG_TYPE_UNKNOWN)
+            );
+            StatementDescription statementDescription = new StatementDescription(ParametersDescription.EMPTY, new RowDescription(columns));
+            StatementImpl statement = new StatementImpl(this, Constants.EMPTY_STRING, null, null, statementDescription);
+            ThrowingSupplier op = () -> singletonList(new Object[]{null, null, null}).iterator();
+            return Collections.singletonList(new QueryPortal(this, Constants.EMPTY_STRING, statement, PortalCommand.SELECT, EMPTY_INT_ARRAY, op));
+        }
         try {
             // TODO possibly it's worth to add SqlEmptyNode to sql parser
             if (query.trim().isEmpty()) {
@@ -238,10 +250,6 @@ public class QueryProviderImpl implements QueryProvider {
 
         if (SqlUtil.isCallTo(query, SqlShowOption.OPERATOR)) {
             return prepareShowOption(session, name, statement, (SqlShowOption) query);
-        }
-
-        if (Objects.equals(SELECT_NULL_NULL_NULL, String.valueOf(query))) {
-            return new QueryPortal(this, name, statement, PortalCommand.SELECT, EMPTY_INT_ARRAY, () -> singletonList(new Object[]{null, null, null}).iterator());
         }
 
         if (query.isA(SqlKind.QUERY)) {

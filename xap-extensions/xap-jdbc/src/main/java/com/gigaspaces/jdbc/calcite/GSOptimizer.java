@@ -1,9 +1,9 @@
 package com.gigaspaces.jdbc.calcite;
 
 import com.gigaspaces.jdbc.calcite.parser.GSSqlParserFactoryWrapper;
-import com.google.common.collect.ImmutableList;
-import com.gigaspaces.jdbc.calcite.sql.extension.GSSqlOperatorTable;
 import com.gigaspaces.jdbc.calcite.pg.PgCalciteSchema;
+import com.gigaspaces.jdbc.calcite.sql.extension.GSSqlOperatorTable;
+import com.google.common.collect.ImmutableList;
 import com.j_spaces.core.IJSpace;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -39,8 +39,8 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.util.Pair;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -58,6 +58,7 @@ public class GSOptimizer {
 
     private static final SqlParser.Config PARSER_CONFIG = SqlParser.configBuilder()
         .setParserFactory(GSSqlParserFactoryWrapper.FACTORY)
+        .setConformance(LENIENT)
         .setQuotedCasing(Casing.UNCHANGED)
         .setUnquotedCasing(Casing.UNCHANGED)
         .setCaseSensitive(false).build();

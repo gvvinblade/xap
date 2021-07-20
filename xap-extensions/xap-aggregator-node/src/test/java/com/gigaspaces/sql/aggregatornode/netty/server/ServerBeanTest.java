@@ -261,8 +261,8 @@ class ServerBeanTest extends AbstractServerTest{
             String expected = "" +
 "| oid   | nspname    | nspowner | nspacl |\n" +
 "| ----- | ---------- | -------- | ------ |\n" +
-"| 0     | PUBLIC     | 0        | null   |\n" +
-"| -1000 | PG_CATALOG | 0        | null   |\n";
+"| 0     | public     | 0        | null   |\n" +
+"| -1000 | pg_catalog | 0        | null   |\n";
             DumpUtils.checkResult(res, expected);
         }
     }

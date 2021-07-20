@@ -136,6 +136,10 @@ public class QueryProviderImpl implements QueryProvider {
     @Override
     public List<Portal<?>> executeQueryMultiline(Session session, String query) throws ProtocolException {
         log.debug("Executing query: {}", query);
+        MockStatement mock = MockStatement.mockFor(this, session, Constants.EMPTY_STRING, query);
+        if (mock != null)
+            return Collections.singletonList(mock.createPortal(Constants.EMPTY_STRING, EMPTY_INT_ARRAY));
+
         if (query.equalsIgnoreCase(SELECT_NULL_NULL_NULL)) {
             List<ColumnDescription> columns = ImmutableList.of(
                     new ColumnDescription("column1", TypeUtils.PG_TYPE_UNKNOWN),

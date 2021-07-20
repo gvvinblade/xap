@@ -29,6 +29,8 @@ public class TypeUtils {
     public static final PgType PG_TYPE_FLOAT4 = TypeFloat4.INSTANCE;
     public static final PgType PG_TYPE_FLOAT8 = TypeFloat8.INSTANCE;
     public static final PgType PG_TYPE_VARCHAR = TypeVarchar.INSTANCE;
+    public static final PgType PG_TYPE_NAME = TypeName.INSTANCE;
+    public static final PgType PG_TYPE_TEXT = TypeText.INSTANCE;
     public static final PgType PG_TYPE_DATE = TypeDate.INSTANCE;
     public static final PgType PG_TYPE_TIME = TypeTime.INSTANCE;
     public static final PgType PG_TYPE_TIMESTAMP = TypeTimestamp.INSTANCE;

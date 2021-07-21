@@ -39,7 +39,10 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.util.Pair;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.apache.calcite.sql.validate.SqlConformanceEnum.LENIENT;
 
@@ -217,7 +220,7 @@ public class GSOptimizer {
     private static CalciteSchema createSchema(IJSpace space) {
         CalciteSchema res = CalciteSchema.createRootSchema(true, false,
                 space.getName(), new GSRootSchema());
-        res.add("public", new GSSchema(space));
+        res.add(PUBLIC_SCHEMA_NAME, new GSSchema(space));
         res.add(PgCalciteSchema.NAME, PgCalciteSchema.INSTANCE);
         return res;
     }

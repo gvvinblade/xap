@@ -184,14 +184,14 @@ public class MockStatement implements Statement {
         Matcher m;
         if ((m = P_ATTRIBUTES.matcher(query)).find())
             return queryMockAttributes(provider, session, stmt, m);
-        if ((m = P_INDEXED_ATTRIBUTES_1.matcher(query)).find())
-            return queryMockIndexes1(provider, session, stmt, m);
-        if ((m = P_INDEXED_ATTRIBUTES_2.matcher(query)).find())
-            return queryMockIndexes2(provider, session, stmt, m);
-        if ((m = P_CONSTRAINT_1.matcher(query)).find())
-            return queryMockConstraints(provider, session, stmt, m);
-        if ((m = P_CONSTRAINT_2.matcher(query)).find())
-            return queryMockConstraints(provider, session, stmt, m);
+        if (P_INDEXED_ATTRIBUTES_1.matcher(query).find())
+            return queryMockIndexes1(provider, stmt);
+        if (P_INDEXED_ATTRIBUTES_2.matcher(query).find())
+            return queryMockIndexes2(provider, stmt);
+        if (P_CONSTRAINT_1.matcher(query).find())
+            return queryMockConstraints(provider, stmt);
+        if (P_CONSTRAINT_2.matcher(query).find())
+            return queryMockConstraints(provider, stmt);
 
         return null;
     }
@@ -224,7 +224,6 @@ public class MockStatement implements Statement {
 
     private static MockStatement queryMockAttributes(QueryProviderImpl provider, Session session, String stmt, Matcher m) {
         String tableName = m.group(1);
-        String namespaceName = m.group(2);
         StatementDescription description = new StatementDescription(
                 ParametersDescription.EMPTY,
                 new RowDescription(ImmutableList.of(
@@ -248,10 +247,10 @@ public class MockStatement implements Statement {
                         new ColumnDescription("relhassubclass", TypeUtils.PG_TYPE_BOOL)
                 ))
         );
-        return new MockStatement(provider, stmt, description, () -> executeQuery1(session, tableName, namespaceName));
+        return new MockStatement(provider, stmt, description, () -> executeTableQuery(session, tableName));
     }
 
-    private static Iterator<?> executeQuery1(Session session, String tableName, String namespaceName) throws ProtocolException {
+    private static Iterator<?> executeTableQuery(Session session, String tableName) throws ProtocolException {
         try {
             ImmutableList.Builder<Object[]> b = ImmutableList.builder();
             ISpaceProxy space = session.getSpace();
@@ -295,9 +294,7 @@ public class MockStatement implements Statement {
         }
     }
 
-    private static MockStatement queryMockIndexes1(QueryProviderImpl provider, Session session, String stmt, Matcher m) {
-        String tableName = m.group(1);
-        String namespaceName = m.group(2);
+    private static MockStatement queryMockIndexes1(QueryProviderImpl provider, String stmt) {
         StatementDescription description = new StatementDescription(
                 ParametersDescription.EMPTY,
                 new RowDescription(ImmutableList.of(
@@ -308,16 +305,10 @@ public class MockStatement implements Statement {
                         new ColumnDescription("relname1", TypeUtils.PG_TYPE_NAME)
                 ))
         );
-        return new MockStatement(provider, stmt, description, () -> executeQuery2(session, tableName, namespaceName));
+        return new MockStatement(provider, stmt, description, Collections::emptyIterator);
     }
 
-    private static Iterator<?> executeQuery2(Session session, String tableName, String namespaceName) {
-        return Collections.emptyIterator();
-    }
-
-    private static MockStatement queryMockIndexes2(QueryProviderImpl provider, Session session, String stmt, Matcher m) {
-        String tableName = m.group(1);
-        String namespaceName = m.group(2);
+    private static MockStatement queryMockIndexes2(QueryProviderImpl provider, String stmt) {
         StatementDescription description = new StatementDescription(
                 ParametersDescription.EMPTY,
                 new RowDescription(ImmutableList.of(
@@ -328,13 +319,10 @@ public class MockStatement implements Statement {
                         new ColumnDescription("exp1", TypeUtils.PG_TYPE_UNKNOWN)
                 ))
         );
-        return new MockStatement(provider, stmt, description, () -> executeQuery2(session, tableName, namespaceName));
+        return new MockStatement(provider, stmt, description, Collections::emptyIterator);
     }
 
-    private static MockStatement queryMockConstraints(QueryProviderImpl provider, Session session, String stmt, Matcher m) {
-        String spaceName = m.group(1);
-        String tableName = m.group(3);
-        String namespaceName = m.group(4);
+    private static MockStatement queryMockConstraints(QueryProviderImpl provider, String stmt) {
         StatementDescription description = new StatementDescription(
                 ParametersDescription.EMPTY,
                 new RowDescription(ImmutableList.of(
@@ -353,13 +341,13 @@ public class MockStatement implements Statement {
                         new ColumnDescription("DEFERRABILITY", TypeUtils.PG_TYPE_INT2)
                 ))
         );
-        return new MockStatement(provider, stmt, description, () -> executeQuery2(session, tableName, namespaceName));
+        return new MockStatement(provider, stmt, description, Collections::emptyIterator);
     }
 
-    private String name;
-    private QueryProviderImpl provider;
-    private StatementDescription description;
-    private ThrowingSupplier<Iterator<?>, ProtocolException> op;
+    private final String name;
+    private final QueryProviderImpl provider;
+    private final StatementDescription description;
+    private final ThrowingSupplier<Iterator<?>, ProtocolException> op;
 
     @Override
     public String getName() {
@@ -386,6 +374,7 @@ public class MockStatement implements Statement {
         provider.closeS(name);
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Portal<T> createPortal(String name, int[] fc) {
         return new QueryPortal<T>(provider, name, this, PortalCommand.SELECT, fc, (ThrowingSupplier)op);
     }

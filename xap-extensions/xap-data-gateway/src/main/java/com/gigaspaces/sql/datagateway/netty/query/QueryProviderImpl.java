@@ -202,15 +202,15 @@ public class QueryProviderImpl implements QueryProvider {
             ParametersDescription paramDesc;
             List<RelDataTypeField> fieldList = paramType.getFieldList();
             if (fieldList.isEmpty()) {
+                if (paramTypes.length != 0)
+                    throw new NonBreakingException(ErrorCodes.PROTOCOL_VIOLATION, "Unexpected parameter types: " + Arrays.toString(paramTypes));
                 paramDesc = ParametersDescription.EMPTY;
             } else {
                 List<ParameterDescription> params = new ArrayList<>(paramType.getFieldCount());
                 for (int i = 0; i < fieldList.size(); i++) {
-                    if (paramTypes.length <= i || paramTypes[i] == 0) {
-                        params.add(new ParameterDescription(TypeUtils.fromInternal(fieldList.get(i).getType())));
-                    } else {
-                        params.add(new ParameterDescription(TypeUtils.getType(paramTypes[i])));
-                    }
+                    int requested = paramTypes.length <= i ? 0 : paramTypes[i];
+                    RelDataType inferred = fieldList.get(i).getType();
+                    params.add(new ParameterDescription(TypeUtils.getType(requested, inferred)));
                 }
                 paramDesc = new ParametersDescription(params);
             }

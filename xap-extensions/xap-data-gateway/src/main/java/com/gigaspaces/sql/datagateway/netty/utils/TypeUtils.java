@@ -1,5 +1,6 @@
 package com.gigaspaces.sql.datagateway.netty.utils;
 
+import com.gigaspaces.jdbc.calcite.pg.PgTypeDescriptor;
 import com.gigaspaces.sql.datagateway.netty.exception.BreakingException;
 import com.gigaspaces.sql.datagateway.netty.exception.ProtocolException;
 import com.gigaspaces.sql.datagateway.netty.query.ColumnDescription;
@@ -33,10 +34,25 @@ public class TypeUtils {
     public static final PgType PG_TYPE_TIME = TypeTime.INSTANCE;
     public static final PgType PG_TYPE_TIMESTAMP = TypeTimestamp.INSTANCE;
     public static final PgType PG_TYPE_TIMESTAMPTZ = TypeTimestampTZ.INSTANCE;
-    public static final PgType PG_TYPE_INTERVAL = TypeInterval.INSTANCE;
     public static final PgType PG_TYPE_TIMETZ = TypeTimeTZ.INSTANCE;
     public static final PgType PG_TYPE_NUMERIC = TypeNumeric.INSTANCE;
     public static final PgType PG_TYPE_CURSOR = TypeCursor.INSTANCE;
+    public static final ContextualType PG_TYPE_INTERVAL = ContextualType
+        .withDescriptor(PgTypeDescriptor.INTERVAL)
+        .map(SqlTypeName.INTERVAL_DAY, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_HOUR, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_MINUTE, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_SECOND, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_DAY_HOUR, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_DAY_MINUTE, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_DAY_SECOND, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_HOUR_MINUTE, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_HOUR_SECOND, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_MINUTE_SECOND, TypeIntervalDaySecond.INSTANCE)
+        .map(SqlTypeName.INTERVAL_YEAR, TypeIntervalYearMonth.INSTANCE)
+        .map(SqlTypeName.INTERVAL_MONTH, TypeIntervalYearMonth.INSTANCE)
+        .map(SqlTypeName.INTERVAL_YEAR_MONTH, TypeIntervalYearMonth.INSTANCE)
+        .build();
 
     private static final IntObjectHashMap<PgType> elementToArray;
     private static final IntObjectHashMap<PgType> typeIdToType;
@@ -68,8 +84,13 @@ public class TypeUtils {
         }
     }
 
-    public static PgType getType(int id) {
-        return typeIdToType.getOrDefault(id, PG_TYPE_UNKNOWN);
+    public static PgType getType(int requested, RelDataType inferred) {
+        if (requested == 0 || requested == PG_TYPE_UNKNOWN.getId())
+            return fromInternal(inferred);
+        PgType type = typeIdToType.getOrDefault(requested, PG_TYPE_UNKNOWN);
+        if (type instanceof ContextualType)
+            return ((ContextualType) type).getMappedType(inferred);
+        return type;
     }
 
     public static PgType getArrayType(int elementTypeId) {
@@ -119,7 +140,7 @@ public class TypeUtils {
             case INTERVAL_MINUTE:
             case INTERVAL_MINUTE_SECOND:
             case INTERVAL_SECOND:
-                return PG_TYPE_INTERVAL;
+                return PG_TYPE_INTERVAL.getMappedType(internalType);
             case DATE:
                 return PG_TYPE_DATE;
             case TIME:

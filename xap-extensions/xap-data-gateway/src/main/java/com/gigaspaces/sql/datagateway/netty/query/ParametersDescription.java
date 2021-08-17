@@ -1,11 +1,7 @@
 package com.gigaspaces.sql.datagateway.netty.query;
 
-import com.gigaspaces.sql.datagateway.netty.utils.TypeUtils;
-
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.unmodifiableList;
 
@@ -16,13 +12,6 @@ public class ParametersDescription {
 
     public ParametersDescription(List<ParameterDescription> parameters) {
         this.parameters = parameters;
-    }
-
-    public ParametersDescription(int[] types) {
-        this.parameters = Arrays.stream(types)
-                .mapToObj(TypeUtils::getType)
-                .map(ParameterDescription::new)
-                .collect(Collectors.toList());
     }
 
     public int getParametersCount() {

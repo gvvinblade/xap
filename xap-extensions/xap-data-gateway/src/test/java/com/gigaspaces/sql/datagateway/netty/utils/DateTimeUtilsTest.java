@@ -1,7 +1,11 @@
 package com.gigaspaces.sql.datagateway.netty.utils;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -142,5 +146,31 @@ class DateTimeUtilsTest {
         LocalDateTime localDateTime = utils.toLocalDateTime(pgMicros);
         OffsetDateTime parsed = localDateTime.atOffset(offset0);
         assertEquals(orig, parsed);
+    }
+
+    @Test
+    public void testDaySeconds() throws Exception {
+        ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
+        ByteBuf buf = allocator.buffer(20);
+        BigDecimal internal = DateTimeUtils.asDaySeconds("10:15:30.5456");
+        TypeIntervalDaySecond.INSTANCE.asBinary(null, buf, internal);
+        BigDecimal deserialized = TypeIntervalDaySecond.INSTANCE.fromBinary(null, buf);
+        assertNotNull(deserialized);
+        assertEquals(internal, deserialized);
+        String text = DateTimeUtils.daySecondsAsText(deserialized);
+        assertEquals("0 years 0 mons 0 days 10 hours 15 mins 30.545 secs", text);
+    }
+
+    @Test
+    public void testYearMonths() throws Exception {
+        ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
+        ByteBuf buf = allocator.buffer(20);
+        BigDecimal internal = DateTimeUtils.asYearMonths("+2004 years -4 mons");
+        TypeIntervalDaySecond.INSTANCE.asBinary(null, buf, internal);
+        BigDecimal deserialized = TypeIntervalDaySecond.INSTANCE.fromBinary(null, buf);
+        assertNotNull(deserialized);
+        assertEquals(internal, deserialized);
+        String text = DateTimeUtils.yearMonthsAsText(deserialized);
+        assertEquals("2003 years 8 mons 0 days 0 hours 0 mins 0.0 secs", text);
     }
 }

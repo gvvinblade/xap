@@ -2,20 +2,34 @@ package com.gigaspaces.sql.datagateway.netty.utils;
 
 import com.gigaspaces.sql.datagateway.netty.exception.NonBreakingException;
 import com.gigaspaces.sql.datagateway.netty.exception.ProtocolException;
+import io.netty.buffer.ByteBuf;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.*;
 import java.time.chrono.IsoEra;
 import java.time.temporal.ChronoField;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.SimpleTimeZone;
+import java.util.StringTokenizer;
 import java.util.TimeZone;
 import java.util.function.Supplier;
 
+import static java.lang.Math.addExact;
+import static java.lang.Math.multiplyExact;
+
 public class DateTimeUtils {
+
+    private static final long MILLISECONDS_PER_DAY = 86400000;
+    private static final long MILLISECONDS_PER_HOUR = 3600000;
+    private static final long MILLISECONDS_PER_MINUTE = 60000;
+    private static final long MILLISECONDS_PER_SECOND = 1000;
     private static final int MAX_NANOS_BEFORE_WRAP_ON_ROUND = 999999500;
     private static final long DATE_POSITIVE_INFINITY = 9223372036825200000L;
     private static final long DATE_NEGATIVE_INFINITY = -9223372036832400000L;
@@ -956,5 +970,188 @@ public class DateTimeUtils {
 
     private static int getNanoPart(long pgMicros) {
         return (int) ((pgMicros % 1000000) * 1000);
+    }
+
+    public static String yearMonthsAsText(BigDecimal value) {
+        long months = value.longValue();
+
+        long years = months / 12;
+        months %= 12;
+
+        return years + " years " + months + " mons 0 days 0 hours 0 mins 0.0 secs";
+    }
+
+    public static String daySecondsAsText(BigDecimal value) {
+        long milliseconds = value.longValue();
+
+        long seconds = milliseconds / MILLISECONDS_PER_SECOND;
+        milliseconds %= MILLISECONDS_PER_SECOND;
+        long minutes = seconds / 60;
+        seconds %= 60;
+        long hours = minutes / 60;
+        minutes %= 60;
+        long days = hours / 24;
+        hours %= 24;
+
+        DecimalFormat df = (DecimalFormat) NumberFormat.getInstance(Locale.US);
+        df.applyPattern("0.0#####");
+
+        double seconds0 = seconds + (double) milliseconds / MILLISECONDS_PER_SECOND;
+
+        return "0 years 0 mons " +
+            days + " days " +
+            hours + " hours " +
+            minutes + " mins " +
+            df.format(seconds0) + " secs";
+    }
+
+    private enum IntervalType {YEAR_MONTHS, DAY_SECONDS}
+
+    public static BigDecimal asDaySeconds(String text) throws ProtocolException {
+        return asInterval(text, IntervalType.DAY_SECONDS);
+    }
+
+    public static BigDecimal asYearMonths(String text) throws ProtocolException {
+        return asInterval(text, IntervalType.YEAR_MONTHS);
+    }
+
+    public static BigDecimal asDaySeconds(long time, int day, int month) throws ProtocolException {
+        return asInterval(time, day, month, IntervalType.DAY_SECONDS);
+    }
+
+    public static BigDecimal asYearMonths(long time, int day, int month) throws ProtocolException {
+        return asInterval(time, day, month, IntervalType.YEAR_MONTHS);
+    }
+
+    public static void writeYearMonths(ByteBuf dst, BigDecimal value) {
+        dst.writeLong(0)  // microseconds
+            .writeInt(0) // days
+            .writeInt(value.intValue());  // months
+    }
+
+    public static void writeDaySeconds(ByteBuf dst, BigDecimal value) {
+        long milliseconds = value.longValue();
+        int days = (int) (milliseconds / MILLISECONDS_PER_DAY);
+        milliseconds %= MILLISECONDS_PER_DAY;
+        dst.writeLong(milliseconds * 1000) // microseconds
+            .writeInt(days) // days
+            .writeInt(0); // months
+    }
+
+    private static BigDecimal asInterval(String text, IntervalType type) throws ProtocolException {
+        // parse PG interval string, e.g. '+2004 years -4 mons +20 days -15:57:12.1'
+        int years = 0;
+        int months = 0;
+        int days = 0;
+        int hours = 0;
+        int minutes = 0;
+        double seconds = 0;
+
+        try {
+            String valueToken = null;
+
+            text = text.replace('+', ' ');
+            final StringTokenizer st = new StringTokenizer(text);
+            for (int i = 1; st.hasMoreTokens(); i++) {
+                String token = st.nextToken();
+
+                if ((i & 1) == 1) {
+                    int endHours = token.indexOf(':');
+                    if (endHours == -1) {
+                        valueToken = token;
+                        continue;
+                    }
+
+                    // This handles hours, minutes, seconds and microseconds for
+                    // ISO intervals
+                    int offset = (token.charAt(0) == '-') ? 1 : 0;
+
+                    String value1 = token.substring(offset, endHours);
+                    hours = parseInt(value1);
+                    String value = token.substring(endHours + 1, endHours + 3);
+                    minutes = parseInt(value);
+
+                    int endMinutes = token.indexOf(':', endHours + 1);
+                    if (endMinutes != -1) {
+                        String value2 = token.substring(endMinutes + 1);
+                        seconds = parseDouble(value2);
+                    }
+
+                    if (offset == 1) {
+                        hours = -hours;
+                        minutes = -minutes;
+                        seconds = -seconds;
+                    }
+
+                    valueToken = null;
+                } else {
+                    // This handles years, months, days for both, ISO and
+                    // Non-ISO intervals. Hours, minutes, seconds and microseconds
+                    // are handled for Non-ISO intervals here.
+
+                    if (token.startsWith("year")) {
+                        years = parseInt(valueToken);
+                    } else if (token.startsWith("mon")) {
+                        months = parseInt(valueToken);
+                    } else if (token.startsWith("day")) {
+                        days = parseInt(valueToken);
+                    } else if (token.startsWith("hour")) {
+                        hours = parseInt(valueToken);
+                    } else if (token.startsWith("min")) {
+                        minutes = parseInt(valueToken);
+                    } else if (token.startsWith("sec")) {
+                        seconds = parseDouble(valueToken);
+                    }
+                }
+            }
+        } catch (NumberFormatException e) {
+            throw new NonBreakingException(ErrorCodes.NUMERIC_CONSTANT_OUT_OF_RANGE, "Failed to read interval", e);
+        }
+
+        if (type == IntervalType.YEAR_MONTHS) {
+            if (days != 0 || hours != 0 || minutes != 0 || seconds != 0.0) {
+                throw new NonBreakingException(ErrorCodes.UNSUPPORTED_FEATURE, "Cannot convert value into YEAR_MONTH interval type");
+            }
+
+            return BigDecimal.valueOf(addExact(multiplyExact(years, 12), months));
+        }
+
+        if (years != 0 || months != 0) {
+            throw new NonBreakingException(ErrorCodes.UNSUPPORTED_FEATURE, "Cannot convert value into DAY_SECONDS interval type");
+        }
+
+        long value = multiplyExact(days, MILLISECONDS_PER_DAY);
+        value = addExact(value, multiplyExact(hours, MILLISECONDS_PER_HOUR));
+        value = addExact(value, multiplyExact(minutes, MILLISECONDS_PER_MINUTE));
+        value = addExact(value, (long) (seconds * MILLISECONDS_PER_SECOND));
+
+        return BigDecimal.valueOf(value);
+    }
+
+    private static double parseDouble(String valueToken) {
+        return (valueToken == null) ? 0.0 : Double.parseDouble(valueToken);
+    }
+
+    private static int parseInt(String valueToken) {
+        return (valueToken == null) ? 0 : Integer.parseInt(valueToken);
+    }
+
+    private static BigDecimal asInterval(long time, int day, int month, IntervalType type) throws ProtocolException {
+        if (type == IntervalType.YEAR_MONTHS) {
+            if (time != 0 || day != 0) {
+                throw new NonBreakingException(ErrorCodes.UNSUPPORTED_FEATURE, "Cannot convert value into YEAR_MONTHS interval type");
+            }
+
+            return BigDecimal.valueOf(month);
+        }
+
+        if (month != 0) {
+            throw new NonBreakingException(ErrorCodes.UNSUPPORTED_FEATURE, "Cannot convert value into DAY_SECONDS interval type");
+        }
+
+        long milliseconds = time / 1000; // PG uses microsecond resolution;
+
+        long value = addExact(multiplyExact(day, MILLISECONDS_PER_DAY), milliseconds);
+        return BigDecimal.valueOf(value);
     }
 }

@@ -2,6 +2,7 @@ package com.gigaspaces.sql.datagateway.netty.server;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.openspaces.core.GigaSpaceConfigurer;
@@ -36,6 +37,9 @@ class ServerBeanTest extends AbstractServerTest{
         gigaSpace.write(new MyPojo("Adam Bb", 30, "Israel", date2, new Time(date2.getTime()), new Timestamp(date2.getTime())));
         gigaSpace.write(new MyPojo("Eve Cc", 35, "UK", date3, new Time(date3.getTime()), new Timestamp(date3.getTime())));
         gigaSpace.write(new MyPojo("NoCountry Dd", 40, null, date4, new Time(date4.getTime()), new Timestamp(date4.getTime())));
+
+
+        gigaSpace.write(new Pojo1(new Pojo2("someString")));
     }
 
     @ParameterizedTest
@@ -62,6 +66,16 @@ class ServerBeanTest extends AbstractServerTest{
 "| 'FullScan: MyPojo'                            |\n" +
 "| '  Select: first_name, last_name, email, age' |\n" +
 "| '  Filter: (last_name = Aa)'                  |";
+            DumpUtils.checkResult(resultSet, expected);
+        }
+    }
+
+    @Test
+    void testComplexObject() throws Exception {
+        try (Connection conn = connect(false)) {
+            final Statement statement = conn.createStatement();
+            ResultSet resultSet = statement.executeQuery(String.format("SELECT * FROM \"%s\"", Pojo1.class.getName()));
+            String expected = "";
             DumpUtils.checkResult(resultSet, expected);
         }
     }

@@ -19,6 +19,7 @@ import java.util.Set;
 public class TypeUtils {
     public static final PgType PG_TYPE_UNKNOWN = TypeUnknown.INSTANCE;
     public static final PgType PG_TYPE_ANY = TypeAny.INSTANCE;
+    public static final PgType PG_TYPE_RECORD = TypeRecord.INSTANCE;
     public static final PgType PG_TYPE_BOOL = TypeBool.INSTANCE;
     public static final PgType PG_TYPE_BYTEA = TypeBytea.INSTANCE;
     public static final PgType PG_TYPE_CHAR = TypeChar.INSTANCE;
@@ -133,7 +134,7 @@ public class TypeUtils {
             case CURSOR:
                 return PG_TYPE_CURSOR;
             case ANY:
-                return PG_TYPE_ANY;
+                return PG_TYPE_RECORD;
             case DISTINCT:
             case NULL:
             case SYMBOL:

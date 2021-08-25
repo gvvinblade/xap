@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PgTypeDescriptor {
+    public static final PgTypeDescriptor RECORD = new PgTypeDescriptor(2249, "record", -1, 0, 0);
     public static final PgTypeDescriptor ANY = new PgTypeDescriptor(2276, "any", 4, 0, 0);
     public static final PgTypeDescriptor BOOL = new PgTypeDescriptor(16, "bool", 1, 1000, 0);
     public static final PgTypeDescriptor BPCHAR = new PgTypeDescriptor(1042, "bpchar", -1, 1014, 0);

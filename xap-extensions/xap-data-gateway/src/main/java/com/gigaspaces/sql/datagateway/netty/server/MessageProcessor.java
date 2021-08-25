@@ -147,8 +147,7 @@ public class MessageProcessor extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        // TODO log exception properly
-        cause.printStackTrace();
+        log.error("An exception occurred during query processing", cause);
 
         String code;
         boolean close;

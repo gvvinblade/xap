@@ -2,6 +2,7 @@ package com.gigaspaces.sql.datagateway.netty.query;
 
 import com.gigaspaces.internal.client.spaceproxy.ISpaceProxy;
 import com.gigaspaces.sql.datagateway.netty.utils.DateTimeUtils;
+import com.gigaspaces.sql.datagateway.netty.utils.RecordSerializer;
 import com.j_spaces.core.client.FinderException;
 import com.j_spaces.core.client.SpaceFinder;
 
@@ -20,11 +21,18 @@ public class Session implements Closeable {
     private ISpaceProxy space;
     private String spaceLocators = "localhost";
     private DateTimeUtils dateTimeUtils;
+    private RecordSerializer recordSerializer;
 
     public DateTimeUtils getDateTimeUtils() {
         if (dateTimeUtils == null)
             dateTimeUtils = new DateTimeUtils(this::getTimeZone);
         return dateTimeUtils;
+    }
+
+    public RecordSerializer getRecordSerializer() {
+        if (recordSerializer == null)
+            recordSerializer = new RecordSerializer();
+        return recordSerializer;
     }
 
     public Charset getCharset() {

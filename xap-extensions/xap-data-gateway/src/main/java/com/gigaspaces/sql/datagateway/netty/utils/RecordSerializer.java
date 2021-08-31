@@ -2,6 +2,7 @@ package com.gigaspaces.sql.datagateway.netty.utils;
 
 import com.gigaspaces.sql.datagateway.netty.exception.NonBreakingException;
 import com.gigaspaces.sql.datagateway.netty.exception.ProtocolException;
+import com.gigaspaces.utils.Pair;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.calcite.linq4j.tree.Primitive;
@@ -30,7 +31,7 @@ public class RecordSerializer {
     }
 
     @FunctionalInterface
-    interface FieldSerializer {
+    interface PropertySerializer {
         String asString(Object obj) throws Exception;
     }
 
@@ -209,62 +210,23 @@ public class RecordSerializer {
         }
     }
 
-    static class FieldWrapper implements PropertyWrapper {
-        private final Field field;
+    private static class TypedWrapper implements ObjectF {
+        private final Class<?> type;
+        private final ObjectF delegate;
 
-        FieldWrapper(Field field) {
-            field.setAccessible(true);
-            this.field = field;
+        public TypedWrapper(Class<?> type, ObjectF delegate) {
+            this.type = type;
+            this.delegate = delegate;
         }
 
         @Override
         public Class<?> getType() {
-            return field.getType();
+            return type;
         }
 
         @Override
-        public Object get(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.get(obj);
-        }
-
-        @Override
-        public boolean getBoolean(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getBoolean(obj);
-        }
-
-        @Override
-        public byte getByte(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getByte(obj);
-        }
-
-        @Override
-        public char getChar(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getChar(obj);
-        }
-
-        @Override
-        public short getShort(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getShort(obj);
-        }
-
-        @Override
-        public int getInt(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getInt(obj);
-        }
-
-        @Override
-        public long getLong(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getLong(obj);
-        }
-
-        @Override
-        public float getFloat(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getFloat(obj);
-        }
-
-        @Override
-        public double getDouble(Object obj) throws IllegalArgumentException, IllegalAccessException {
-            return field.getDouble(obj);
+        public Object apply(Object o) throws Exception {
+            return delegate.apply(o);
         }
     }
 
@@ -303,32 +265,34 @@ public class RecordSerializer {
         if (clazz.isArray())
             return obj -> asArrayString(clazz, obj);
 
-        Map<String, PropertyWrapper> props = new LinkedHashMap<>();
-        for (Field f : clazz.getDeclaredFields()) {
-            props.put(f.getName(), new FieldWrapper(f));
-        }
-        for(Method m : clazz.getDeclaredMethods()) {
-            if (isGetterMethod(m)) {
-                String name = propertyName(m);
-                if (props.containsKey(name))
-                    props.replace(name, createWrapper(m));
-                else
-                    props.put(name, createWrapper(m));
+        Map<Pair<Class<?>, String>, PropertyWrapper> props = new LinkedHashMap<>();
+        Class<?> clazz0 = clazz;
+        do {
+            for (Field f : clazz0.getDeclaredFields()) {
+                props.put(new Pair<>(clazz0, f.getName()), null); // placeholder to get right fields order
             }
-        }
-        List<FieldSerializer> serializers = new ArrayList<>(props.size());
+            for (Method m : clazz0.getDeclaredMethods()) { // access getters
+                if (isGetterMethod(m)) {
+                    props.replace(new Pair<>(clazz0, propertyName(m)), createWrapper(m));
+                }
+            }
+        } while ((clazz0 = clazz0.getSuperclass()) != null);
+
+        List<PropertySerializer> serializers = new ArrayList<>(props.size());
         for (PropertyWrapper pw : props.values()) {
-            Class<?> type = pw.getType();
-            if (Primitive.isBox(clazz)) {
-                serializers.add(o -> asSimpleString(pw, o));
-            } else if (Primitive.is(type)) {
-                serializers.add(o -> asPrimitiveString(pw, o));
-            } else if (String.class.isAssignableFrom(type)) {
-                serializers.add(o -> asEscapedString(pw, o));
-            } else if (type.isArray()) {
-                serializers.add(o -> asArrayString(pw, o));
-            } else {
-                serializers.add(o -> asString(pw.get(o)));
+            if (pw != null) {
+                Class<?> type = pw.getType();
+                if (Primitive.isBox(clazz)) {
+                    serializers.add(o -> asSimpleString(pw, o));
+                } else if (Primitive.is(type)) {
+                    serializers.add(o -> asPrimitiveString(pw, o));
+                } else if (String.class.isAssignableFrom(type)) {
+                    serializers.add(o -> asEscapedString(pw, o));
+                } else if (type.isArray()) {
+                    serializers.add(o -> asArrayString(pw, o));
+                } else {
+                    serializers.add(o -> asString(pw.get(o)));
+                }
             }
         }
 
@@ -351,10 +315,13 @@ public class RecordSerializer {
             int[] array = (int[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -362,10 +329,13 @@ public class RecordSerializer {
             long[] array = (long[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -373,10 +343,13 @@ public class RecordSerializer {
             byte[] array = (byte[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -384,10 +357,13 @@ public class RecordSerializer {
             char[] array = (char[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -395,10 +371,13 @@ public class RecordSerializer {
             boolean[] array = (boolean[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i] ? 't' : 'f');
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i] ? 't' : 'f');
             }
             return b.append('}').toString();
         }
@@ -406,10 +385,13 @@ public class RecordSerializer {
             short[] array = (short[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -417,10 +399,13 @@ public class RecordSerializer {
             double[] array = (double[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -428,10 +413,13 @@ public class RecordSerializer {
             float[] array = (float[]) array0;
             if (array == null)
                 return "";
-            StringBuilder b = new StringBuilder().append('{');
-            for (int i = 0; i < array.length; i++) {
-                if (i > 0) b.append(',');
-                b.append(array[i]);
+            if (array.length == 0)
+                return "{}";
+
+            StringBuilder b = new StringBuilder()
+                .append('{').append(asString(array[0]));
+            for (int i = 1; i < array.length; i++) {
+                b.append(',').append(array[i]);
             }
             return b.append('}').toString();
         }
@@ -439,10 +427,13 @@ public class RecordSerializer {
         Object[] array = (Object[]) array0;
         if (array == null)
             return "";
-        StringBuilder b = new StringBuilder().append('{');
-        for (int i = 0; i < array.length; i++) {
-            if (i > 0) b.append(',');
-            b.append(asString(array[i]));
+        if (array.length == 0)
+            return "{}";
+
+        StringBuilder b = new StringBuilder()
+            .append('{').append(asString(array[0]));
+        for (int i = 1; i < array.length; i++) {
+            b.append(',').append(asString(array[i]));
         }
         return b.append('}').toString();
     }
@@ -515,7 +506,10 @@ public class RecordSerializer {
 
     private static PropertyWrapper createWrapper(Method getter) throws Exception {
         try {
-            return (PropertyWrapper) createCallSite(LOOKUP.unreflect(getter)).getTarget().invoke();
+            PropertyWrapper wrapper = (PropertyWrapper) createCallSite(LOOKUP.unreflect(getter)).getTarget().invoke();
+            return wrapper instanceof ObjectF
+                ? new TypedWrapper(getter.getReturnType(), (ObjectF) wrapper)
+                : wrapper;
         } catch (Throwable e) {
             throw new ExecutionException(e);
         }

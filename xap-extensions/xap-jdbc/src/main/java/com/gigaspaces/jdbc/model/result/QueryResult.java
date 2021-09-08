@@ -11,6 +11,7 @@ import org.apache.calcite.util.Pair;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.calcite.util.mapping.Mappings;
 
 public abstract class QueryResult {
     private final List<IQueryColumn> selectedColumns;
@@ -139,14 +140,8 @@ public abstract class QueryResult {
 
         // use logical rel to extract final projected columns and alias
         if (logicalRel !=null && logicalRel.fields != null && logicalRel.fields.size() <= columnLabels.length) {
-            for (Pair<Integer, String> field : logicalRel.fields) {
-                String columnLabel = columnLabels[field.getKey()];
-                String newLabel = field.getValue();
-                //e.g. when newLabel == id0 and columnLabel == id then skip, otherwise replace
-                if (!(newLabel.length() > columnLabel.length() && newLabel.startsWith(columnLabel))) {
-                    columnLabels[field.getKey()] = newLabel;
-                }
-            }
+            assert Mappings.isIdentity(Pair.left(logicalRel.fields), logicalRel.fields.size());
+            columnLabels = Pair.right(logicalRel.fields).toArray(new String[0]);
         }
 
         //the field values for the result

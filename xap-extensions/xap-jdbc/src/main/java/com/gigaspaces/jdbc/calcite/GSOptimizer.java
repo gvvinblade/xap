@@ -3,6 +3,7 @@ package com.gigaspaces.jdbc.calcite;
 import com.gigaspaces.jdbc.calcite.parser.GSSqlParserFactoryWrapper;
 import com.gigaspaces.jdbc.calcite.pg.PgCalciteSchema;
 import com.gigaspaces.jdbc.calcite.sql.extension.GSSqlOperatorTable;
+import com.google.common.collect.ImmutableList;
 import com.j_spaces.core.IJSpace;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -19,9 +20,12 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -181,7 +185,7 @@ public class GSOptimizer {
 
     public GSRelNode optimizePhysical(RelRoot logicalRoot) {
         Program program = GSOptimizerProgram.createProgram();
-        RelNode logicalPlan = logicalRoot.project();
+        RelNode logicalPlan = logicalRoot.rel;
         RelNode res = program.run(
                 planner,
                 logicalPlan,
@@ -190,6 +194,41 @@ public class GSOptimizer {
                 Collections.emptyList()
         );
 
+        // An additional projection is required if RelRoot.project() return an object
+        // which is different from the top-level operator.
+        boolean requiresProject = logicalRoot.project() != logicalRoot.rel;
+        if (requiresProject) {
+            // Create logical project to deduce the return type and Calc program.
+            ImmutableList<Pair<Integer, String>> fields = logicalRoot.fields;
+            List<RexNode> projects = new ArrayList<>(fields.size());
+            RexBuilder rexBuilder = res.getCluster().getRexBuilder();
+            for (Pair<Integer, String> field : fields) {
+                projects.add(rexBuilder.makeInputRef(res, field.left));
+            }
+            LogicalProject project = LogicalProject.create(
+                    res,
+                    Collections.emptyList(),
+                    projects,
+                    Pair.right(fields)
+            );
+
+            // Create the Calc program, similarly to GSProjectToCalcRule.onMatch
+            RexProgram calcProgram = RexProgram.create(
+                    res.getRowType(),
+                    project.getProjects(),
+                    null,
+                    project.getRowType(),
+                    project.getCluster().getRexBuilder()
+            );
+            // Install the GSCalc on top of the optimized node.
+            res = new GSCalc(
+                    project.getCluster(),
+                    res.getCluster().traitSet().replace(GSConvention.INSTANCE),
+                    Collections.emptyList(),
+                    res,
+                    calcProgram
+            );
+        }
         return (GSRelNode) res;
     }
 

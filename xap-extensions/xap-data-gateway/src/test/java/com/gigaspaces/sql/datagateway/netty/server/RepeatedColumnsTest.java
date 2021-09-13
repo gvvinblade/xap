@@ -1,15 +1,16 @@
 package com.gigaspaces.sql.datagateway.netty.server;
 
 import com.gigaspaces.sql.datagateway.netty.data.Student;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.EmbeddedSpaceConfigurer;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,6 +23,27 @@ public class RepeatedColumnsTest extends AbstractServerTest {
         ).gigaSpace();
 
         gigaSpace.write(new Student("1", "Kevin", 21));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testRepeatedColumns0(boolean simple) throws Exception {
+        try (Connection conn = connect(simple)) {
+            final String qry = String.format("" +
+                "select name, age from ( " +
+                "select age, name, id from %1$s ) " +
+                "order by id " +
+                "", "\"" + Student.class.getName() + "\"");
+
+            final PreparedStatement statement = conn.prepareStatement(qry);
+            assertTrue(statement.execute());
+            ResultSet res = statement.getResultSet();
+            String expected = "" +
+"| name  | age |\n" +
+"| ----- | --- |\n" +
+"| Kevin | 21  |\n";
+            DumpUtils.checkResult(res, expected);
+        }
     }
 
     @ParameterizedTest
